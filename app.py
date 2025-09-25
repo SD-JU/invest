@@ -1,5 +1,4 @@
 # app.py
-import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -34,19 +33,22 @@ st.subheader("자산군별 비율 입력 (%)")
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    div_yield = st.number_input("배당주 (%)", min_value=0, max_value=100, value=30, step=1)
+    div_yield = st.number_input("배당주 ETF (%)", min_value=0, max_value=100, value=30, step=1)
     gold = st.number_input("금 (%)", min_value=0, max_value=100, value=15, step=1)
 
 with col2:
     dollar_bond = st.number_input("달러 단기채 (%)", min_value=0, max_value=100, value=15, step=1)
-    growth_etf = st.number_input("성장형 ETF (%)", min_value=0, max_value=100, value=30, step=1)
+    growth_etf = st.number_input("성장주 ETF (%)", min_value=0, max_value=100, value=30, step=1)
 
 with col3:
     crypto = st.number_input("크립토 (%)", min_value=0, max_value=100, value=10, step=1)
 
-weights = np.array([div_yield, gold, dollar_bond, growth_etf, crypto], dtype=float)
-labels = np.array(["배당주", "금", "달러 단기채", "성장형 ETF", "크립토"])
+# 한글 라벨(표/CSV/입력용)
+labels = np.array(["배당주 ETF", "금", "달러 단기채", "성장주 ETF", "크립토"])
+# 파이 차트 전용 영문 라벨(웹 폰트 이슈 회피)
+labels_en = np.array(["Dividend ETF", "Gold", "USD Short-Term Bonds", "Growth ETF", "Crypto"])
 
+weights = np.array([div_yield, gold, dollar_bond, growth_etf, crypto], dtype=float)
 total_percent = float(weights.sum())
 st.write(f"👉 현재 비율 합계: **{total_percent:.0f}%**")
 
@@ -59,11 +61,9 @@ auto_normalize = st.toggle("합계가 100%가 아니면 자동 정규화(미리�
 st.subheader("📌 투자 분배 결과")
 
 def render_table(df: pd.DataFrame):
-    # 보기 좋은 서식 적용
     styled = df.style.format({"비율(%)": "{:.2f}", "투자 금액(원)": "{:,}"})
     st.dataframe(styled, use_container_width=True)
 
-# 금액 계산 로직
 if total_amount <= 0:
     # 금액이 0일 때도 섹션은 유지하고 안내 제공
     st.info("총 투자 금액을 1원 이상 입력하면 금액 분배 결과가 표시됩니다.")
@@ -88,7 +88,7 @@ else:
     else:
         alloc_amounts = (total_amount * norm_weights).round(0).astype(int)
         df = pd.DataFrame({
-            "자산군": labels,
+            "자산군": labels,                          # 표/CSV는 한글 유지
             "비율(%)": (norm_weights * 100).round(2),
             "투자 금액(원)": alloc_amounts
         })
@@ -96,7 +96,7 @@ else:
             st.warning(f"합계 {total_percent:.0f}% → **자동 정규화**로 환산해 미리보기를 표시합니다.")
         render_table(df)
 
-        # CSV 다운로드
+        # CSV 다운로드 (한글 라벨 유지)
         csv = df.to_csv(index=False).encode("utf-8-sig")
         st.download_button(
             "CSV 다운로드",
@@ -116,12 +116,11 @@ if total_percent == 100 or (auto_normalize and total_percent > 0):
     fig, ax = plt.subplots()
     ax.pie(
         pie_weights,
-        labels=labels,
+        labels=labels_en,   # 차트에만 영문 라벨 사용 (폰트 깨짐 회피)
         autopct="%.1f%%",
         startangle=90
     )
     ax.axis("equal")
-    # 반응형 표시
     st.pyplot(fig, use_container_width=True)
 else:
     st.info("차트를 보려면 합계를 100%로 맞추거나 '자동 정규화'를 켜세요.")
